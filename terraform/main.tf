@@ -8,15 +8,15 @@ resource "random_id" "project_name" {
 }
 
 resource "aws_kms_key" "vault" {
-  description             = "${random_id.project_name.hex}-vault-unseal"
+  description = "${random_id.project_name.hex}-vault-unseal"
 }
 
 data "local_file" "lambda_function" {
-    filename = "${path.module}/../lambda_function.py"
+  filename = "${path.module}/../lambda_function.py"
 }
 
 data "local_file" "vault_config" {
-    filename = "${path.module}/../vault.hcl"
+  filename = "${path.module}/../vault.hcl"
 }
 
 data "archive_file" "lambda" {
@@ -41,11 +41,12 @@ resource "null_resource" "download_vault" {
 }
 
 resource "aws_s3_bucket" "vaultdata" {
-  bucket = "${random_id.project_name.hex}-vaultdata"
-  acl    = "private"
+  bucket        = "${random_id.project_name.hex}-vaultdata"
+  acl           = "private"
+  force_destroy = true
 
   tags {
-    Name        = "Vault Lambda"
+    Name = "Vault Lambda"
   }
 }
 
@@ -53,7 +54,8 @@ resource "aws_s3_bucket_object" "vault" {
   bucket = "${aws_s3_bucket.vaultdata.bucket}"
   key    = "vault"
   source = "${path.module}/vault"
-#  etag   = "${md5(file(path.module/vault))}"
+
+  #  etag   = "${md5(file(path.module/vault))}"
   depends_on = ["null_resource.download_vault"]
 }
 
@@ -141,8 +143,8 @@ resource "aws_cloudwatch_log_group" "vault" {
 
 # See also the following AWS managed policy: AWSLambdaBasicExecutionRole
 resource "aws_iam_policy" "lambda_logging" {
-  name = "${random_id.project_name.hex}-lambda_logging"
-  path = "/"
+  name        = "${random_id.project_name.hex}-lambda_logging"
+  path        = "/"
   description = "IAM policy for logging from a lambda"
 
   policy = <<EOF
@@ -163,7 +165,7 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role = "${aws_iam_role.iam_for_lambda.name}"
+  role       = "${aws_iam_role.iam_for_lambda.name}"
   policy_arn = "${aws_iam_policy.lambda_logging.arn}"
 }
 
@@ -183,6 +185,7 @@ resource "aws_api_gateway_method" "vault" {
   resource_id   = "${aws_api_gateway_resource.vault.id}"
   http_method   = "ANY"
   authorization = "NONE"
+
   request_parameters = {
     "method.request.path.proxy" = true
   }
@@ -201,6 +204,5 @@ resource "aws_api_gateway_deployment" "vault" {
   rest_api_id = "${aws_api_gateway_rest_api.vault.id}"
   stage_name  = "test"
 
-  variables = {
-  }
+  variables = {}
 }

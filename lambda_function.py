@@ -77,13 +77,13 @@ def lambda_handler(event, context):
     print(path)
     url=urlparse.urljoin('http://localhost:8200', path)
     if event['httpMethod'] == 'GET':
-        request = requests.get(url)
+        request = requests.get(url, headers=event['headers'])
     elif event['httpMethod'] == 'PUT':
         print event['body']
-        request = requests.put(url, event['body'])
+        request = requests.put(url, headers=event['headers'], data=json.dumps(event['body']))
     elif event['httpMethod'] == 'POST':
         print event['body']
-        request = requests.post(url, event['body'])
+        request = requests.post(url, headers=event['headers'], data=json.dumps(event['body']))
     else:
         print(fail)
     data = request.json()
