@@ -90,7 +90,7 @@ def lambda_handler(event, context):
     print(data)
 
     return {
-        'statusCode': 200,
+        'statusCode': request.status_code,
         'body': json.dumps(data),
         'isBase64Encoded': 'false'
     }
