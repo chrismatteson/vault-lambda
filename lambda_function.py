@@ -80,18 +80,24 @@ def lambda_handler(event, context):
         request = requests.get(url, headers=event['headers'])
     elif event['httpMethod'] == 'PUT':
         print event['body']
-        request = requests.put(url, headers=event['headers'], data=json.dumps(event['body']))
+        request = requests.put(url, headers=event['headers'], data=event['body'])
     elif event['httpMethod'] == 'POST':
         print event['body']
-        request = requests.post(url, headers=event['headers'], data=json.dumps(event['body']))
+        request = requests.post(url, headers=event['headers'], data=event['body'])
     else:
         print(fail)
-    data = request.json()
-    print(data)
-
-    return {
-        'statusCode': request.status_code,
-        'body': json.dumps(data),
-        'isBase64Encoded': 'false'
-    }
-
+    print(request.text)
+    if request.text:
+        data = request.json()
+        print(data)
+        return {
+            'statusCode': request.status_code,
+            'body': json.dumps(data),
+            'isBase64Encoded': 'false'
+        }
+    else:
+        print('empty')
+        return {
+            'statusCode': request.status_code,
+            'isBase64Encoded': 'false'
+        }
