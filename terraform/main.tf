@@ -7,8 +7,14 @@ resource "random_id" "project_name" {
   byte_length = 4
 }
 
+# Local for tag to attach to all items
+locals {
+  tags = "${merge(var.tags, map("ProjectName", random_id.project_name.hex))}"
+}
+
 resource "aws_kms_key" "vault" {
   description = "${random_id.project_name.hex}-vault-unseal"
+  tags        = "${local.tags}"
 }
 
 data "local_file" "lambda_function" {
@@ -44,18 +50,14 @@ resource "aws_s3_bucket" "vaultdata" {
   bucket        = "${random_id.project_name.hex}-vaultdata"
   acl           = "private"
   force_destroy = true
-
-  tags {
-    Name = "Vault Lambda"
-  }
+  tags          = "${local.tags}"
 }
 
 resource "aws_s3_bucket_object" "vault" {
-  bucket = "${aws_s3_bucket.vaultdata.bucket}"
-  key    = "vault"
-  source = "${path.module}/vault"
-
-  #  etag   = "${md5(file(path.module/vault))}"
+  bucket     = "${aws_s3_bucket.vaultdata.bucket}"
+  key        = "vault"
+  source     = "${path.module}/vault"
+  tags       = "${local.tags}"
   depends_on = ["null_resource.download_vault"]
 }
 
@@ -127,6 +129,7 @@ resource "aws_lambda_function" "vault_lambda" {
   runtime          = "python2.7"
   timeout          = 30
   memory_size      = 256
+  tags             = "${local.tags}"
 
   environment {
     variables = {
@@ -162,6 +165,7 @@ resource "aws_lambda_permission" "allow_apigateway_proxy" {
 resource "aws_cloudwatch_log_group" "vault" {
   name              = "/aws/lambda/${aws_lambda_function.vault_lambda.function_name}"
   retention_in_days = 14
+  tags              = "${local.tags}"
 }
 
 # See also the following AWS managed policy: AWSLambdaBasicExecutionRole
@@ -254,7 +258,14 @@ resource "aws_api_gateway_deployment" "vault" {
   depends_on = ["aws_api_gateway_integration.vault"]
 
   rest_api_id = "${aws_api_gateway_rest_api.vault.id}"
-  stage_name  = "test"
+  stage_name  = ""
 
   variables = {}
+}
+
+resource "aws_api_gateway_stage" "stage" {
+  stage_name    = "${random_id.project_name.hex}"
+  rest_api_id   = "${aws_api_gateway_rest_api.vault.id}"
+  deployment_id = "${aws_api_gateway_deployment.vault.id}"
+  tags          = "${local.tags}"
 }
